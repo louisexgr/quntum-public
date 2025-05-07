@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Circuit Builder</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        .tab-navigation {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 16px;
+            cursor: pointer;
+            border: none;
+            background-color: #f1f8ff;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 4px;
+            margin-right: 4px;
+        }
+        
+        .tab.active {
+            background-color: #e6f0ff;
+            font-weight: bold;
+        }
+        
+        h1 {
+            font-size: 24px;
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+        
+        h2 {
+            font-size: 18px;
+            margin-top: 24px;
+            margin-bottom: 12px;
+        }
+        
+        .quantum-gates {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .gate {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #d1d5da;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+            user-select: none;
+        }
+        
+        .gate.selected {
+            background-color: #24292e;
+            color: white;
+        }
+        
+        .gate-description {
+            margin-top: 8px;
+            font-size: 14px;
+            min-height: 60px;
+            background-color: #f6f8fa;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .circuit-container {
+            margin-top: 24px;
+            border: 1px solid #e1e4e8;
+            border-radius: 4px;
+            padding: 16px;
+            background-color: #f6f8fa;
+        }
+        
+        .circuit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-add {
+            background-color: #0366d6;
+            color: white;
+        }
+        
+        .btn-remove {
+            background-color: #d73a49;
+            color: white;
+        }
+        
+        .btn-reset {
+            background-color: #6a737d;
+            color: white;
+        }
+        
+        .btn-run {
+            background-color: #24292e;
+            color: white;
+            padding: 8px 16px;
+            font-size: 16px;
+            margin-top: 16px;
+        }
+        
+        .btn-back {
+            background-color: #0366d6;
+            color: white;
+            padding: 8px 16px;
+            font-size: 16px;
+            margin: 16px auto;
+            display: block;
+        }
+        
+        .qubit-line {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+            height: 40px;
+        }
+        
+        .qubit-id {
+            width: 40px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        
+        .qubit-wire {
+            flex: 1;
+            height: 2px;
+            background-color: #d1d5da;
+            position: relative;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .gate-on-wire {
+            width: 36px;
+            height: 36px;
+            border: 1px solid #d1d5da;
+            border-radius: 4px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        
+        .add-gate {
+            width: 36px;
+            height: 36px;
+            border: 1px dashed #d1d5da;
+            border-radius: 4px;
+            background-color: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            cursor: pointer;
+            color: #6a737d;
+        }
+        
+        .current-state {
+            margin-top: 24px;
+            padding: 16px;
+            border: 1px solid #e1e4e8;
+            border-radius: 4px;
+            background-color: #f6f8fa;
+            text-align: center;
+            font-family: monospace;
+            font-size: 18px;
+        }
+        
+        .center {
+            text-align: center;
+        }
+        
+        .results-tab, .builder-tab {
+            display: none;
+        }
+        
+        .results-tab.active, .builder-tab.active {
+            display: block;
+        }
+        
+        .measurement-results {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .measurement-box {
+            border: 1px solid #d1d5da;
+            border-radius: 4px;
+            padding: 15px;
+            width: 80px;
+            text-align: center;
+            font-family: monospace;
+        }
+        
+        .frequency-distribution {
+            margin-top: 20px;
+        }
+        
+        .frequency-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .state-label {
+            width: 60px;
+            font-family: monospace;
+            text-align: right;
+            padding-right: 10px;
+        }
+        
+        .bar {
+            height: 24px;
+            background-color: #b289f3;
+            border-radius: 4px;
+        }
+        
+        .percentage {
+            margin-left: 10px;
+            font-weight: bold;
+        }
+        
+        .measurements-title {
+            margin-top: 30px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Quantum Circuit Builder</h1>
+        <p>Build quantum circuits by selecting gates and adding them to qubits. Run the circuit to see the results of your quantum operations.</p>
+        
+        <div class="tab-navigation">
+            <button class="tab active" id="builder-tab-btn">Circuit Builder</button>
+            <button class="tab" id="results-tab-btn">Results</button>
+        </div>
+        
+        <div class="builder-tab active" id="builder-content">
+            <h2>Quantum Gates</h2>
+            <div class="quantum-gates">
+                <div class="gate selected" data-gate="H">H</div>
+                <div class="gate" data-gate="X">X</div>
+                <div class="gate" data-gate="Y">Y</div>
+                <div class="gate" data-gate="Z">Z</div>
+                <div class="gate" data-gate="S">S</div>
+                <div class="gate" data-gate="T">T</div>
+                <div class="gate" data-gate="CNOT">CNOT</div>
+                <div class="gate" data-gate="SWAP">SWAP</div>
+                <div class="gate" data-gate="M">M</div>
+            </div>
+            
+            <div class="gate-description">
+                <strong>Hadamard</strong>
+                <p>Creates superposition</p>
+            </div>
+            
+            <div class="circuit-header">
+                <h2>Circuit</h2>
+                <div class="button-group">
+                    <button class="btn btn-add" id="add-qubit-btn">Add Qubit</button>
+                    <button class="btn btn-remove" id="remove-qubit-btn">Remove Qubit</button>
+                    <button class="btn btn-reset" id="reset-btn">Reset</button>
+                </div>
+            </div>
+            
+            <div class="circuit-container" id="circuit-container">
+                <!-- Qubit lines will be added dynamically -->
+            </div>
+            
+            <h2>Current State</h2>
+            <div class="current-state" id="current-state">|00⟩</div>
+            
+            <div class="center">
+                <button class="btn btn-run" id="run-btn">Run Circuit</button>
+            </div>
+        </div>
+        
+        <div class="results-tab" id="results-content">
+            <h2>Measurement Results</h2>
+            
+            <div id="results-summary">
+                <p>Results from <span id="measurement-count">10</span> measurements:</p>
+                <div class="measurement-results" id="measurement-boxes">
+                    <!-- Measurement boxes will be added dynamically -->
+                </div>
+            </div>
+            
+            <div class="frequency-distribution">
+                <h3>Frequency distribution:</h3>
+                <div id="frequency-bars">
+                    <!-- Frequency bars will be added dynamically -->
+                </div>
+            </div>
+            
+            <div class="center">
+                <button class="btn btn-back" id="back-btn">Back to Circuit Builder</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Quantum circuit state
+        const state = {
+            selectedGate: 'H',
+            qubits: [
+                { id: 'q0', gates: [] },
+                { id: 'q1', gates: [] }
+            ],
+            currentState: '|00⟩',
+            measurements: [],
+            frequencies: {}
+        };
+        
+        // Gate information
+        const gateInfo = {
+            'H': { name: 'Hadamard', description: 'Creates superposition' },
+            'X': { name: 'Pauli-X', description: 'Bit flip operation (NOT gate)' },
+            'Y': { name: 'Pauli-Y', description: 'Rotation around Y-axis' },
+            'Z': { name: 'Pauli-Z', description: 'Phase flip operation' },
+            'S': { name: 'Phase', description: 'π/2 phase rotation' },
+            'T': { name: 'π/8', description: 'π/4 phase rotation' },
+            'CNOT': { name: 'Controlled-NOT', description: 'Two-qubit gate that flips the target qubit if the control qubit is |1⟩' },
+            'SWAP': { name: 'SWAP', description: 'Swaps the state of two qubits' },
+            'M': { name: 'Measurement', description: 'Collapses superposition to a classical state' }
+        };
+        
+        // DOM Elements
+        const circuitContainer = document.getElementById('circuit-container');
+        const currentStateElement = document.getElementById('current-state');
+        const measurementBoxes = document.getElementById('measurement-boxes');
+        const frequencyBars = document.getElementById('frequency-bars');
+        
+        // Tab Navigation
+        document.getElementById('builder-tab-btn').addEventListener('click', () => {
+            document.getElementById('builder-tab-btn').classList.add('active');
+            document.getElementById('results-tab-btn').classList.remove('active');
+            document.getElementById('builder-content').classList.add('active');
+            document.getElementById('results-content').classList.remove('active');
+        });
+        
+        document.getElementById('results-tab-btn').addEventListener('click', () => {
+            document.getElementById('builder-tab-btn').classList.remove('active');
+            document.getElementById('results-tab-btn').classList.add('active');
+            document.getElementById('builder-content').classList.remove('active');
+            document.getElementById('results-content').classList.add('active');
+        });
+        
+        document.getElementById('back-btn').addEventListener('click', () => {
+            document.getElementById('builder-tab-btn').click();
+        });
+        
+        // Gate Selection
+        document.querySelectorAll('.gate').forEach(gate => {
+            gate.addEventListener('click', () => {
+                document.querySelectorAll('.gate').forEach(g => g.classList.remove('selected'));
+                gate.classList.add('selected');
+                state.selectedGate = gate.dataset.gate;
+                
+                // Update gate description
+                const info = gateInfo[state.selectedGate];
+                document.querySelector('.gate-description').innerHTML = `
+                    <strong>${info.name}</strong>
+                    <p>${info.description}</p>
+                `;
+            });
+        });
+        
+        // Add Qubit
+        document.getElementById('add-qubit-btn').addEventListener('click', () => {
+            const newQubitId = `q${state.qubits.length}`;
+            state.qubits.push({ id: newQubitId, gates: [] });
+            renderCircuit();
+            updateCurrentState();
+        });
+        
+        // Remove Qubit
+        document.getElementById('remove-qubit-btn').addEventListener('click', () => {
+            if (state.qubits.length > 1) {
+                state.qubits.pop();
+                renderCircuit();
+                updateCurrentState();
+            }
+        });
+        
+        // Reset Circuit
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            state.qubits.forEach(qubit => {
+                qubit.gates = [];
+            });
+            renderCircuit();
+            updateCurrentState();
+        });
+        
+        // Run Circuit
+        document.getElementById('run-btn').addEventListener('click', () => {
+            runCircuit();
+        });
+        
+        // Render Circuit
+        function renderCircuit() {
+            circuitContainer.innerHTML = '';
+            
+            state.qubits.forEach(qubit => {
+                const qubitLine = document.createElement('div');
+                qubitLine.className = 'qubit-line';
+                
+                const qubitId = document.createElement('div');
+                qubitId.className = 'qubit-id';
+                qubitId.textContent = `${qubit.id}:`;
+                
+                const qubitWire = document.createElement('div');
+                qubitWire.className = 'qubit-wire';
+                
+                // Render existing gates
+                qubit.gates.forEach((gate, index) => {
+                    const gateElement = document.createElement('div');
+                    gateElement.className = 'gate-on-wire';
+                    gateElement.textContent = gate;
+                    qubitWire.appendChild(gateElement);
+                });
+                
+                // Add button to add a new gate
+                const addButton = document.createElement('div');
+                addButton.className = 'add-gate';
+                addButton.textContent = '+';
+                addButton.title = `Add ${state.selectedGate} gate`;
+                addButton.addEventListener('click', () => {
+                    addGateToQubit(qubit.id);
+                });
+                qubitWire.appendChild(addButton);
+                
+                qubitLine.appendChild(qubitId);
+                qubitLine.appendChild(qubitWire);
+                circuitContainer.appendChild(qubitLine);
+            });
+        }
+        
+        // Add Gate to Qubit
+        function addGateToQubit(qubitId) {
+            state.qubits.forEach(qubit => {
+                if (qubit.id === qubitId) {
+                    qubit.gates.push(state.selectedGate);
+                }
+            });
+            renderCircuit();
+            updateCurrentState();
+        }
+        
+        // Update Current State
+        function updateCurrentState() {
+            const hasHadamard = state.qubits.some(qubit => qubit.gates.includes('H'));
+            const hasX = state.qubits.some(qubit => qubit.gates.includes('X'));
+            
+            if (hasHadamard) {
+                // Check if all qubits have Hadamard
+                const allHadamard = state.qubits.every(qubit => qubit.gates.includes('H'));
+                
+                if (allHadamard) {
+                    // Full superposition of all qubits
+                    const numQubits = state.qubits.length;
+                    if (numQubits <= 2) {
+                        const states = [];
+                        for (let i = 0; i < Math.pow(2, numQubits); i++) {
+                            const bitString = i.toString(2).padStart(numQubits, '0');
+                            states.push(`|${bitString}⟩`);
+                        }
+                        state.currentState = states.join(' + ');
+                    } else {
+                        state.currentState = '(superposition of all states)';
+                    }
+                } else {
+                    // Partial superposition
+                    const numQubits = state.qubits.length;
+                    let baseState = Array(numQubits).fill('0');
+                    
+                    // Apply X gates to flip bits
+                    state.qubits.forEach((qubit, index) => {
+                        if (qubit.gates.includes('X')) {
+                            baseState[index] = '1';
+                        }
+                    });
+                    
+                    // Create superposition for qubits with Hadamard
+                    const states = [baseState.join('')];
+                    state.qubits.forEach((qubit, index) => {
+                        if (qubit.gates.includes('H')) {
+                            const newStates = [];
+                            states.forEach(s => {
+                                const arr = s.split('');
+                                arr[index] = arr[index] === '0' ? '1' : '0';
+                                newStates.push(arr.join(''));
+                            });
+                            states.push(...newStates);
+                        }
+                    });
+                    
+                    // Create the state display
+                    const stateStrings = states.map(s => `|${s}⟩`);
+                    if (stateStrings.length <= 8) {
+                        state.currentState = stateStrings.join(' + ');
+                    } else {
+                        state.currentState = '(superposition of multiple states)';
+                    }
+                }
+            } else if (hasX) {
+                // Apply only X gates (bit flips)
+                let bitString = Array(state.qubits.length).fill('0');
+                
+                state.qubits.forEach((qubit, index) => {
+                    if (qubit.gates.includes('X')) {
+                        bitString[index] = '1';
+                    }
+                });
+                
+                state.currentState = `|${bitString.join('')}⟩`;
+            } else {
+                // Default state
+                state.currentState = `|${'0'.repeat(state.qubits.length)}⟩`;
+            }
+            
+            currentStateElement.textContent = state.currentState;
+        }
+        
+        // Simulate Measurements
+        function simulateMeasurement() {
+            const numQubits = state.qubits.length;
+            const hasMeasurement = state.qubits.some(qubit => qubit.gates.includes('M'));
+            
+            // Generate probabilities based on circuit state
+            const hasHadamard = state.qubits.some(qubit => qubit.gates.includes('H'));
+            const hasX = state.qubits.some(qubit => qubit.gates.includes('X'));
+            
+            let probabilities = {};
+            
+            if (hasHadamard) {
+                // Count hadamard gates to determine how many bits are in superposition
+                let hadamardCount = 0;
+                let baseState = Array(numQubits).fill('0');
+                
+                // Apply X gates first
+                state.qubits.forEach((qubit, index) => {
+                    if (qubit.gates.includes('X')) {
+                        baseState[index] = '1';
+                    }
+                    if (qubit.gates.includes('H')) {
+                        hadamardCount++;
+                    }
+                });
+                
+                // Generate all possible states based on hadamard count
+                const possibleStates = Math.pow(2, hadamardCount);
+                const probability = 1 / possibleStates;
+                
+                // Identify which qubits have Hadamard
+                const hadamardPositions = [];
+                state.qubits.forEach((qubit, index) => {
+                    if (qubit.gates.includes('H')) {
+                        hadamardPositions.push(index);
+                    }
+                });
+                
+                // Initialize with the base state
+                let states = [baseState.slice()];
+                
+                // Generate all combinations
+                hadamardPositions.forEach(pos => {
+                    const newStates = [];
+                    states.forEach(state => {
+                        // Keep the original state
+                        newStates.push(state.slice());
+                        
+                        // Create a variant with the bit flipped
+                        const flippedState = state.slice();
+                        flippedState[pos] = flippedState[pos] === '0' ? '1' : '0';
+                        newStates.push(flippedState);
+                    });
+                    states = newStates;
+                });
+                
+                // Remove duplicates and assign probabilities
+                const uniqueStates = [];
+                states.forEach(state => {
+                    const stateStr = state.join('');
+                    if (!uniqueStates.includes(stateStr)) {
+                        uniqueStates.push(stateStr);
+                        probabilities[stateStr] = probability;
+                    } else {
+                        probabilities[stateStr] += probability;
+                    }
+                });
+            } else if (hasX) {
+                // Only X gates - deterministic result
+                let bitString = Array(numQubits).fill('0');
+                
+                state.qubits.forEach((qubit, index) => {
+                    if (qubit.gates.includes('X')) {
+                        bitString[index] = '1';
+                    }
+                });
+                
+                probabilities[bitString.join('')] = 1.0;
+            } else {
+                // All zeros, deterministic
+                probabilities['0'.repeat(numQubits)] = 1.0;
+            }
+            
+            // Generate 10 measurements based on probabilities
+            state.measurements = [];
+            for (let i = 0; i < 10; i++) {
+                state.measurements.push(generateRandomMeasurement(probabilities));
+            }
+            
+            // Calculate frequencies
+            state.frequencies = {};
+            state.measurements.forEach(measurement => {
+                if (state.frequencies[measurement]) {
+                    state.frequencies[measurement]++;
+                } else {
+                    state.frequencies[measurement] = 1;
+                }
+            });
+        }
+        
+        // Generate a random measurement based on probabilities
+        function generateRandomMeasurement(probabilities) {
+            const rand = Math.random();
+            let cumulativeProbability = 0;
+            
+            for (const state in probabilities) {
+                cumulativeProbability += probabilities[state];
+                if (rand <= cumulativeProbability) {
+                    return state;
+                }
+            }
+            
+            // Fallback to first state
+            return Object.keys(probabilities)[0];
+        }
+        
+        // Display Measurement Results
+        function displayMeasurementResults() {
+            // Display individual measurement boxes
+            measurementBoxes.innerHTML = '';
+            state.measurements.forEach(measurement => {
+                const box = document.createElement('div');
+                box.className = 'measurement-box';
+                box.textContent = measurement;
+                measurementBoxes.appendChild(box);
+            });
+            
+            // Display frequency bars
+            frequencyBars.innerHTML = '';
+            const sortedFrequencies = Object.entries(state.frequencies)
+                .sort(([stateA], [stateB]) => stateA.localeCompare(stateB));
+            
+            sortedFrequencies.forEach(([measurementState, count]) => {
+                const percentage = (count / state.measurements.length) * 100;
+                
+                const barContainer = document.createElement('div');
+                barContainer.className = 'frequency-bar';
+                
+                const label = document.createElement('div');
+                label.className = 'state-label';
+                label.textContent = measurementState + ':';
+                
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.width = `${percentage * 5}px`;
+                
+                const percentageLabel = document.createElement('div');
+                percentageLabel.className = 'percentage';
+                percentageLabel.textContent = `${percentage}%`;
+                
+                barContainer.appendChild(label);
+                barContainer.appendChild(bar);
+                barContainer.appendChild(percentageLabel);
+                
+                frequencyBars.appendChild(barContainer);
+            });
+        }
+        
+        // Run Circuit
+        function runCircuit() {
+            updateCurrentState();
+            simulateMeasurement();
+            displayMeasurementResults();
+            
+            // Switch to results tab
+            document.getElementById('results-tab-btn').click();
+        }
+        
+        // Initialize the circuit
+        renderCircuit();
+        updateCurrentState();
+    </script>
+</body>
+</html>
