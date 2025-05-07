@@ -3,380 +3,447 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bloch Sphere Visualizer</title>
+    <title>Sphère de Bloch Simplifiée</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
+        body, html {
             margin: 0;
-            padding: 100px;
-            background-color: #f8f9fa;
-            color: #333;
-            line-height: 1.6;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            overflow-x: hidden;
         }
-        
         .container {
+            display: flex;
+            flex-direction: column;
             max-width: 1200px;
             margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
+            padding: 20px;
         }
-        
-        h1 {
-            color: #2c3e50;
-            grid-column: 1 / -1;
-            border-bottom: 2px solid #0a3049;
-            padding-bottom: 10px;
-        }
-        
-        .description {
-            grid-column: 1 / -1;
+        .header {
+            text-align: center;
             margin-bottom: 20px;
         }
-        
-        .controls-panel {
-            background-color: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
         }
-        
-        .bloch-container {
-            background-color: white;
-            border-radius: 10px;
+        .controls {
+            flex: 1;
+            min-width: 300px;
+            background: #f5f5f5;
             padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        .visualization {
+            flex: 2;
+            min-width: 400px;
             height: 500px;
+            background: #ffffff;
+            border-radius: 10px;
+            position: relative;
         }
-        
-        #bloch-sphere {
-            width: 100%;
-            height: 100%;
+        h1 {
+            color: #3498db;
         }
-        
-        .control-group {
+        h2 {
+            color: #2980b9;
+            margin-top: 0;
+        }
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
             margin-bottom: 20px;
         }
-        
-        h2 {
-            color: #103650;
-            margin-top: 0;
-            font-size: 1.4em;
-        }
-        
-        .preset-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-top: 15px;
-        }
-        
         button {
-            padding: 10px;
-            background-color: #3498db;
+            padding: 10px 15px;
+            background: #3498db;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            transition: background-color 0.3s;
-            font-size: 1em;
+            transition: background 0.3s;
         }
-        
         button:hover {
-            background-color: #2980b9;
+            background: #2980b9;
         }
-        
-        .coordinates {
-            background-color: #f1f8fe;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 20px;
-            font-family: monospace;
+        button.active {
+            background: #e74c3c;
         }
-        
-        .quantum-state {
-            background-color: #f1f8fe;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 20px;
+        .slider-group {
+            margin-bottom: 20px;
         }
-        
-        .state-formula {
-            font-size: 1.1em;
-            margin: 10px 0;
-        }
-        
         label {
             display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
+            margin-bottom: 5px;
         }
-        
         input[type="range"] {
             width: 100%;
             margin-bottom: 10px;
         }
-        
-        .value-display {
-            font-family: monospace;
-            color: #2c3e50;
+        .coordinates {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
         }
-        
-        @media (max-width: 768px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
+        .coordinate-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .coordinate-value {
+            font-family: monospace;
+            font-weight: bold;
+        }
+        #bloch-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        .view-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .view-btn {
+            width: 40px;
+            height: 40px;
+            margin: 5px;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Bloch Sphere Visualizer</h1>
-        
-        <div class="description">
-            <p>The Bloch sphere is a geometrical representation of the state space of a qubit. Manipulate the controls to see how different quantum states are represented.</p>
+        <div class="header">
+            <h1>Visualisation de la Sphère de Bloch</h1>
+            <p>Une représentation géométrique des états quantiques d'un qubit</p>
         </div>
         
-        <div class="controls-panel">
-            <h2>Controls</h2>
-            
-            <div class="control-group">
-                <h3>Preset States</h3>
-                <div class="preset-grid">
-                    <button onclick="setState(0, 0)">|0⟩</button>
-                    <button onclick="setState(Math.PI, 0)">|1⟩</button>
-                    <button onclick="setState(Math.PI/2, 0)">|+⟩</button>
-                    <button onclick="setState(Math.PI/2, Math.PI)">|-⟩</button>
-                    <button onclick="setState(Math.PI/2, Math.PI/2)">|+i⟩</button>
-                    <button onclick="setState(Math.PI/2, 3*Math.PI/2)">|-i⟩</button>
+        <div class="content">
+            <div class="controls">
+                <h2>États Prédéfinis</h2>
+                <div class="btn-group">
+                    <button id="state-0" class="active" onclick="setState(0, 0)">|0⟩</button>
+                    <button id="state-1" onclick="setState(Math.PI, 0)">|1⟩</button>
+                    <button id="state-plus" onclick="setState(Math.PI/2, 0)">|+⟩</button>
+                    <button id="state-minus" onclick="setState(Math.PI/2, Math.PI)">|-⟩</button>
+                    <button id="state-plusi" onclick="setState(Math.PI/2, Math.PI/2)">|+i⟩</button>
+                    <button id="state-minusi" onclick="setState(Math.PI/2, 3*Math.PI/2)">|-i⟩</button>
                 </div>
-            </div>
-            
-            <div class="control-group">
-                <label for="theta">Theta (θ): <span class="value-display" id="theta-value">0.00</span>π</label>
-                <input type="range" id="theta" min="0" max="3.1416" step="0.01" value="0" oninput="updateBlochSphere()">
                 
-                <label for="phi">Phi (φ): <span class="value-display" id="phi-value">0.00</span>π</label>
-                <input type="range" id="phi" min="0" max="6.2832" step="0.01" value="0" oninput="updateBlochSphere()">
-            </div>
-            
-            <div class="coordinates">
-                <h3>Cartesian Coordinates</h3>
-                <p>x: <span id="x-value">0.0000</span>, y: <span id="y-value">0.0000</span>, z: <span id="z-value">1.0000</span></p>
+                <h2>Contrôles des Angles</h2>
+                <div class="slider-group">
+                    <label>Theta (θ): <span id="theta-value">0.00π</span></label>
+                    <input type="range" id="theta" min="0" max="3.14159" step="0.01" value="0" oninput="updateStateFromSliders()">
+                    
+                    <label>Phi (φ): <span id="phi-value">0.00π</span></label>
+                    <input type="range" id="phi" min="0" max="6.28318" step="0.01" value="0" oninput="updateStateFromSliders()">
+                </div>
                 
-                <h3>Spherical Coordinates</h3>
-                <p>θ: <span id="theta-display">0.00</span>π, φ: <span id="phi-display">0.00</span>π</p>
+                <h2>Coordonnées</h2>
+                <div class="coordinates">
+                    <div class="coordinate-row">
+                        <span>x:</span>
+                        <span class="coordinate-value" id="x-value">0.0000</span>
+                    </div>
+                    <div class="coordinate-row">
+                        <span>y:</span>
+                        <span class="coordinate-value" id="y-value">0.0000</span>
+                    </div>
+                    <div class="coordinate-row">
+                        <span>z:</span>
+                        <span class="coordinate-value" id="z-value">1.0000</span>
+                    </div>
+                    <div class="coordinate-row">
+                        <span>θ:</span>
+                        <span class="coordinate-value" id="theta-display">0.00π</span>
+                    </div>
+                    <div class="coordinate-row">
+                        <span>φ:</span>
+                        <span class="coordinate-value" id="phi-display">0.00π</span>
+                    </div>
+                </div>
+                
+                <h2>Portes Quantiques</h2>
+                <div class="btn-group">
+                    <button onclick="applyGate('x')">X</button>
+                    <button onclick="applyGate('y')">Y</button>
+                    <button onclick="applyGate('z')">Z</button>
+                    <button onclick="applyGate('h')">H</button>
+                </div>
             </div>
             
-            <div class="quantum-state">
-                <h3>Quantum State</h3>
-                <div class="state-formula" id="state-formula-1">
-                    \[ |\psi\rangle = \cos(\theta/2) |0\rangle + e^{i\phi}\sin(\theta/2) |1\rangle \]
-                </div>
-                <div class="state-formula" id="state-formula-2">
-                    \[ |\psi\rangle = 1.0000 |0\rangle + 0.0000 |1\rangle \]
+            <div class="visualization">
+                <div id="bloch-canvas"></div>
+                <div class="view-controls">
+                    <button class="view-btn" onclick="resetView()">↻</button>
+                    <button class="view-btn" onclick="setView('x')">X</button>
+                    <button class="view-btn" onclick="setView('y')">Y</button>
+                    <button class="view-btn" onclick="setView('z')">Z</button>
                 </div>
             </div>
-        </div>
-        
-        <div class="bloch-container">
-            <h2>Bloch Sphere Visualization</h2>
-            <div id="bloch-sphere"></div>
         </div>
     </div>
-
+    
     <script>
-        // Three.js variables
-        let scene, camera, renderer, sphere, arrow, theta = 0, phi = 0;
+        // Variables globales
+        let scene, camera, renderer;
+        let sphere, stateDot, stateVector;
+        let currentTheta = 0, currentPhi = 0;
         
-        // Initialize the Bloch sphere
-        function initBlochSphere() {
-            // Scene setup
+        // Initialisation
+        initScene();
+        animate();
+        
+        function initScene() {
+            // Créer la scène
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xf8f9fa);
+            scene.background = new THREE.Color(0xf0f0f0);
             
-            // Camera setup
-            const container = document.getElementById('bloch-sphere');
-            camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-            camera.position.z = 2.5;
+            // Configurer la caméra
+            const container = document.getElementById('bloch-canvas');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+            camera.position.set(0, 0, 3);
             
-            // Renderer setup
+            // Configurer le renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setSize(width, height);
             container.appendChild(renderer.domElement);
             
-            // Add axes helper (with thicker lines)
-            const axesHelper = new THREE.AxesHelper(1.5);
-            const axesMaterial = new THREE.LineBasicMaterial({ linewidth: 2 });
-            axesHelper.material = axesMaterial;
-            scene.add(axesHelper);
+            // Lumière ambiante
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
             
-            // Create sphere (wireframe with better visibility)
-            const geometry = new THREE.SphereGeometry(1, 32, 32);
-            const material = new THREE.MeshBasicMaterial({ 
-                color: 0x3498db, 
-                wireframe: true,
-                wireframeLinewidth: 2,
+            // Lumière directionnelle
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+            
+            // Créer la sphère de Bloch
+            createBlochSphere();
+            
+            // Gérer le redimensionnement
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        function createBlochSphere() {
+            // Sphère principale
+            const sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
+            const sphereMaterial = new THREE.MeshPhongMaterial({
+                color: 0x3498db,
                 transparent: true,
-                opacity: 0.7
+                opacity: 0.2,
+                wireframe: false
             });
-            sphere = new THREE.Mesh(geometry, material);
+            sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
             scene.add(sphere);
             
-            // Create arrow (quantum state) with better visibility
-            const dir = new THREE.Vector3(0, 0, 1);
-            dir.normalize();
-            const origin = new THREE.Vector3(0, 0, 0);
-            const length = 1.5;
-            const hex = 0xff0000;
-            const arrowHelper = new THREE.ArrowHelper(
-                dir, 
-                origin, 
-                length, 
-                hex, 
-                0.3,  // head length
-                0.15  // head width
+            // Axes
+            createAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(1.5, 0, 0), 0xff0000); // X - rouge
+            createAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1.5, 0), 0x00ff00); // Y - vert
+            createAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 1.5), 0x0000ff); // Z - bleu
+            
+            // Point d'état
+            const dotGeometry = new THREE.SphereGeometry(0.05, 16, 16);
+            const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xe74c3c });
+            stateDot = new THREE.Mesh(dotGeometry, dotMaterial);
+            scene.add(stateDot);
+            
+            // Vecteur d'état
+            stateVector = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 0, 1),
+                new THREE.Vector3(0, 0, 0),
+                1,
+                0xe74c3c,
+                0.1,
+                0.05
             );
-            arrow = arrowHelper;
+            scene.add(stateVector);
+            
+            // État initial |0⟩
+            updateState(0, 0);
+        }
+        
+        function createAxis(start, end, color) {
+            const direction = new THREE.Vector3().subVectors(end, start).normalize();
+            const length = start.distanceTo(end);
+            
+            const arrowHelper = new THREE.ArrowHelper(
+                direction,
+                start,
+                length,
+                color,
+                0.1,
+                0.05
+            );
+            
             scene.add(arrowHelper);
-            
-            // Add labels with better visibility
-            addLabels();
-            
-            // Handle window resize
-            window.addEventListener('resize', onWindowResize);
-            
-            // Initial render
-            updateBlochSphere();
         }
         
-        // Add labels to the Bloch sphere with improved styling
-        function addLabels() {
-            const labelPositions = [
-                { text: "|0⟩", position: new THREE.Vector3(0, 0, 1.3), color: 0x000000 },
-                { text: "|1⟩", position: new THREE.Vector3(0, 0, -1.3), color: 0x000000 },
-                { text: "|+⟩", position: new THREE.Vector3(1.3, 0, 0), color: 0x000000 },
-                { text: "|-⟩", position: new THREE.Vector3(-1.3, 0, 0), color: 0x000000 },
-                { text: "|+i⟩", position: new THREE.Vector3(0, 1.3, 0), color: 0x000000 },
-                { text: "|-i⟩", position: new THREE.Vector3(0, -1.3, 0), color: 0x000000 }
-            ];
+        function updateState(theta, phi) {
+            currentTheta = theta;
+            currentPhi = phi;
             
-            labelPositions.forEach(label => {
-                const canvas = document.createElement('canvas');
-                canvas.width = 256;
-                canvas.height = 128;
-                const context = canvas.getContext('2d');
-                
-                context.font = 'Bold 48px Arial';
-                context.fillStyle = 'rgba(0, 0, 0, 0.9)';
-                context.textAlign = 'center';
-                context.textBaseline = 'middle';
-                context.fillText(label.text, canvas.width/2, canvas.height/2);
-                
-                const texture = new THREE.CanvasTexture(canvas);
-                const material = new THREE.SpriteMaterial({ 
-                    map: texture,
-                    transparent: true
-                });
-                const sprite = new THREE.Sprite(material);
-                sprite.position.copy(label.position);
-                sprite.scale.set(0.3, 0.15, 1);
-                scene.add(sprite);
-            });
-        }
-        
-        // Update the Bloch sphere based on theta and phi values
-        function updateBlochSphere() {
-            // Get values from sliders
-            theta = parseFloat(document.getElementById('theta').value);
-            phi = parseFloat(document.getElementById('phi').value);
-            
-            // Update display values
-            document.getElementById('theta-value').textContent = (theta / Math.PI).toFixed(2);
-            document.getElementById('phi-value').textContent = (phi / Math.PI).toFixed(2);
-            document.getElementById('theta-display').textContent = (theta / Math.PI).toFixed(2);
-            document.getElementById('phi-display').textContent = (phi / Math.PI).toFixed(2);
-            
-            // Calculate cartesian coordinates
+            // Calculer les coordonnées cartésiennes
             const x = Math.sin(theta) * Math.cos(phi);
             const y = Math.sin(theta) * Math.sin(phi);
             const z = Math.cos(theta);
             
-            // Update cartesian coordinates display
+            // Mettre à jour le point
+            stateDot.position.set(x, y, z);
+            
+            // Mettre à jour le vecteur
+            const direction = new THREE.Vector3(x, y, z).normalize();
+            stateVector.setDirection(direction);
+            
+            // Mettre à jour les affichages
+            updateDisplayValues(theta, phi, x, y, z);
+            updateActiveButton(theta, phi);
+        }
+        
+        function updateDisplayValues(theta, phi, x, y, z) {
+            document.getElementById('theta-value').textContent = (theta / Math.PI).toFixed(2) + 'π';
+            document.getElementById('phi-value').textContent = (phi / Math.PI).toFixed(2) + 'π';
+            
             document.getElementById('x-value').textContent = x.toFixed(4);
             document.getElementById('y-value').textContent = y.toFixed(4);
             document.getElementById('z-value').textContent = z.toFixed(4);
             
-            // Update arrow
-            scene.remove(arrow);
-            const dir = new THREE.Vector3(x, y, z);
-            dir.normalize();
-            const origin = new THREE.Vector3(0, 0, 0);
-            const length = 1.5;
-            const hex = 0xff0000;
-            const arrowHelper = new THREE.ArrowHelper(
-                dir, 
-                origin, 
-                length, 
-                hex, 
-                0.3,  // head length
-                0.15  // head width
-            );
-            arrow = arrowHelper;
-            scene.add(arrowHelper);
-            
-            // Update quantum state formula
-            updateQuantumStateFormula(theta, phi);
-            
-            // Render
-            renderer.render(scene, camera);
+            document.getElementById('theta-display').textContent = (theta / Math.PI).toFixed(2) + 'π';
+            document.getElementById('phi-display').textContent = (phi / Math.PI).toFixed(2) + 'π';
         }
         
-        // Set state to preset values
-        function setState(newTheta, newPhi) {
-            document.getElementById('theta').value = newTheta;
-            document.getElementById('phi').value = newPhi;
-            updateBlochSphere();
+        function updateStateFromSliders() {
+            const theta = parseFloat(document.getElementById('theta').value);
+            const phi = parseFloat(document.getElementById('phi').value);
+            updateState(theta, phi);
         }
         
-        // Update the quantum state formula display
-        function updateQuantumStateFormula(theta, phi) {
-            const cosThetaHalf = Math.cos(theta/2);
-            const sinThetaHalf = Math.sin(theta/2);
+        function setState(theta, phi) {
+            // Mettre à jour les sliders
+            document.getElementById('theta').value = theta;
+            document.getElementById('phi').value = phi;
             
-            // Update the second formula with actual values
-            document.getElementById('state-formula-2').innerHTML = `
-                \\[ |\\psi\\rangle = ${cosThetaHalf.toFixed(4)} |0\\rangle + ${sinThetaHalf.toFixed(4)} e^{i${phi.toFixed(2)}} |1\\rangle \\]
-            `;
+            // Mettre à jour l'état
+            updateState(theta, phi);
+        }
+        
+        function updateActiveButton(theta, phi) {
+            // Désactiver tous les boutons
+            document.querySelectorAll('.btn-group button').forEach(btn => {
+                btn.classList.remove('active');
+            });
             
-            // Re-render MathJax
-            if (typeof MathJax !== 'undefined') {
-                MathJax.typeset();
+            // Vérifier les états prédéfinis
+            const states = {
+                'state-0': [0, 0],
+                'state-1': [Math.PI, 0],
+                'state-plus': [Math.PI/2, 0],
+                'state-minus': [Math.PI/2, Math.PI],
+                'state-plusi': [Math.PI/2, Math.PI/2],
+                'state-minusi': [Math.PI/2, 3*Math.PI/2]
+            };
+            
+            // Activer le bouton correspondant
+            for (const [id, [t, p]] of Object.entries(states)) {
+                if (Math.abs(theta - t) < 0.01 && Math.abs((phi % (2 * Math.PI)) - (p % (2 * Math.PI))) < 0.01) {
+                    document.getElementById(id).classList.add('active');
+                    break;
+                }
             }
         }
         
-        // Handle window resize
-        function onWindowResize() {
-            const container = document.getElementById('bloch-sphere');
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
-            renderer.render(scene, camera);
+        function applyGate(gate) {
+            // Obtenir l'état actuel
+            const theta = currentTheta;
+            const phi = currentPhi;
+            
+            let newTheta, newPhi;
+            
+            switch(gate) {
+                case 'x': // NOT gate
+                    newTheta = Math.PI - theta;
+                    newPhi = (phi + Math.PI) % (2 * Math.PI);
+                    break;
+                case 'y':
+                    newTheta = Math.PI - theta;
+                    newPhi = (2 * Math.PI - phi) % (2 * Math.PI);
+                    break;
+                case 'z':
+                    newTheta = theta;
+                    newPhi = (phi + Math.PI) % (2 * Math.PI);
+                    break;
+                case 'h': // Hadamard
+                    if (Math.abs(theta) < 0.01 || Math.abs(theta - Math.PI) < 0.01) {
+                        // |0⟩ ou |1⟩ → |+⟩ ou |-⟩
+                        newTheta = Math.PI/2;
+                        newPhi = (theta < Math.PI/2) ? 0 : Math.PI;
+                    } else if (Math.abs(theta - Math.PI/2) < 0.01 && 
+                              (Math.abs(phi) < 0.01 || Math.abs(phi - Math.PI) < 0.01)) {
+                        // |+⟩ ou |-⟩ → |0⟩ ou |1⟩
+                        newTheta = (phi < Math.PI/2) ? 0 : Math.PI;
+                        newPhi = 0;
+                    } else {
+                        // Cas général
+                        const x = Math.sin(theta) * Math.cos(phi);
+                        const y = Math.sin(theta) * Math.sin(phi);
+                        const z = Math.cos(theta);
+                        
+                        const newX = z;
+                        const newY = -y;
+                        const newZ = x;
+                        
+                        newTheta = Math.acos(newZ);
+                        newPhi = Math.atan2(newY, newX);
+                        if (newPhi < 0) newPhi += 2 * Math.PI;
+                    }
+                    break;
+                default:
+                    return;
+            }
+            
+            // Mettre à jour les sliders et l'état
+            setState(newTheta, newPhi);
         }
         
-        // Animation loop
+        function resetView() {
+            camera.position.set(0, 0, 3);
+            camera.lookAt(0, 0, 0);
+        }
+        
+        function setView(axis) {
+            switch(axis) {
+                case 'x':
+                    camera.position.set(3, 0, 0);
+                    break;
+                case 'y':
+                    camera.position.set(0, 3, 0);
+                    break;
+                case 'z':
+                    camera.position.set(0, 0, 3);
+                    break;
+            }
+            camera.lookAt(0, 0, 0);
+        }
+        
+        function onWindowResize() {
+            const container = document.getElementById('bloch-canvas');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        }
+        
         function animate() {
             requestAnimationFrame(animate);
             renderer.render(scene, camera);
         }
-        
-        // Initialize when page loads
-        window.onload = function() {
-            initBlochSphere();
-            animate();
-        };
     </script>
 </body>
 </html>
