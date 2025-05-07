@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sphère de Bloch Simplifiée</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            overflow-x: hidden;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .controls {
+            flex: 1;
+            min-width: 300px;
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .visualization {
+            flex: 2;
+            min-width: 400px;
+            height: 500px;
+            background: #ffffff;
+            border-radius: 10px;
+            position: relative;
+        }
+        h1 {
+            color: #3498db;
+        }
+        h2 {
+            color: #2980b9;
+            margin-top: 0;
+        }
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        button.active {
+            background: #e74c3c;
+        }
+        .slider-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .coordinates {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .coordinate-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .coordinate-value {
+            font-family: monospace;
+            font-weight: bold;
+        }
+        #bloch-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        .view-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .view-btn {
+            width: 40px;
+            height: 40px;
+            margin: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Visualisation de la Sphère de Bloch</h1>
+            <p>Une représentation géométrique des états quantiques d'un qubit</p>
+        </div>
+        
+        <div class="content">
+            <div class="controls">
+                <h2>États Prédéfinis</h2>
+                <div class="btn-group">
+                    <button id="state-0" class="active" onclick="setState(0, 0)">|0⟩</button>
+                    <button id="state-1" onclick="setState(Math.PI, 0)">|1⟩</button>
+                    <button id="state-plus" onclick="setState(Math.PI/2, 0)">|+⟩</button>
+                    <button id="state-minus" onclick="setState(Math.PI/2, Math.PI)">|-⟩</button>
+                    <button id="state-plusi" onclick="setState(Math.PI/2, Math.PI/2)">|+i⟩</button>
+                    <button id="state-minusi" onclick="setState(Math.PI/2, 3*Math.PI/2)">|-i⟩</button>
+                </div>
+                
+                <h2>Contrôles des Angles</h2>
+                <div class="slider-group">
+                    <label>Theta (θ): <span id="theta-value">0.00π</span></label>
+                    <input type="range" id="theta" min="0" max="3.14159" step="0.01" value="0" oninput="updateStateFromSliders()">
+                    
+                    <label>Phi (φ): <span id="phi-value">0.00π</span></label>
+                    <input type="range" id="phi" min="0" max="6.28318" step="0.01" value="0" oninput="updateStateFromSliders()">
+                </div>
+                
+                <h2>Coordonnées</h2>
+                <div class="coordinates">
+                    <div class="coordinate-row">
+                        <span>x:</span>
+                        <span class="coordinate-value" id="x-value">0.0000</span>
+                    </div>
+                    <div class="coordinate-row">
+                        <span>y:</span>
+                        <span class="coordinate-value" id="y-value">0.0000</span>
+                    </div>
+                    <div class="coordinate-row">
+                        <span>z:</span>
+                        <span class="coordinate-value" id="z-value">1.0000</span>
+                    </div>
+                    <div class="coordinate-row">
+                        <span>θ:</span>
+                        <span class="coordinate-value" id="theta-display">0.00π</span>
+                    </div>
+                    <div class="coordinate-row">
+                        <span>φ:</span>
+                        <span class="coordinate-value" id="phi-display">0.00π</span>
+                    </div>
+                </div>
+                
+                <h2>Portes Quantiques</h2>
+                <div class="btn-group">
+                    <button onclick="applyGate('x')">X</button>
+                    <button onclick="applyGate('y')">Y</button>
+                    <button onclick="applyGate('z')">Z</button>
+                    <button onclick="applyGate('h')">H</button>
+                </div>
+            </div>
+            
+            <div class="visualization">
+                <div id="bloch-canvas"></div>
+                <div class="view-controls">
+                    <button class="view-btn" onclick="resetView()">↻</button>
+                    <button class="view-btn" onclick="setView('x')">X</button>
+                    <button class="view-btn" onclick="setView('y')">Y</button>
+                    <button class="view-btn" onclick="setView('z')">Z</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Variables globales
+        let scene, camera, renderer;
+        let sphere, stateDot, stateVector;
+        let currentTheta = 0, currentPhi = 0;
+        
+        // Initialisation
+        initScene();
+        animate();
+        
+        function initScene() {
+            // Créer la scène
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            
+            // Configurer la caméra
+            const container = document.getElementById('bloch-canvas');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+            camera.position.set(0, 0, 3);
+            
+            // Configurer le renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            container.appendChild(renderer.domElement);
+            
+            // Lumière ambiante
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            // Lumière directionnelle
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+            
+            // Créer la sphère de Bloch
+            createBlochSphere();
+            
+            // Gérer le redimensionnement
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        function createBlochSphere() {
+            // Sphère principale
+            const sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
+            const sphereMaterial = new THREE.MeshPhongMaterial({
+                color: 0x3498db,
+                transparent: true,
+                opacity: 0.2,
+                wireframe: false
+            });
+            sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+            scene.add(sphere);
+            
+            // Axes
+            createAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(1.5, 0, 0), 0xff0000); // X - rouge
+            createAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1.5, 0), 0x00ff00); // Y - vert
+            createAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 1.5), 0x0000ff); // Z - bleu
+            
+            // Point d'état
+            const dotGeometry = new THREE.SphereGeometry(0.05, 16, 16);
+            const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xe74c3c });
+            stateDot = new THREE.Mesh(dotGeometry, dotMaterial);
+            scene.add(stateDot);
+            
+            // Vecteur d'état
+            stateVector = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 0, 1),
+                new THREE.Vector3(0, 0, 0),
+                1,
+                0xe74c3c,
+                0.1,
+                0.05
+            );
+            scene.add(stateVector);
+            
+            // État initial |0⟩
+            updateState(0, 0);
+        }
+        
+        function createAxis(start, end, color) {
+            const direction = new THREE.Vector3().subVectors(end, start).normalize();
+            const length = start.distanceTo(end);
+            
+            const arrowHelper = new THREE.ArrowHelper(
+                direction,
+                start,
+                length,
+                color,
+                0.1,
+                0.05
+            );
+            
+            scene.add(arrowHelper);
+        }
+        
+        function updateState(theta, phi) {
+            currentTheta = theta;
+            currentPhi = phi;
+            
+            // Calculer les coordonnées cartésiennes
+            const x = Math.sin(theta) * Math.cos(phi);
+            const y = Math.sin(theta) * Math.sin(phi);
+            const z = Math.cos(theta);
+            
+            // Mettre à jour le point
+            stateDot.position.set(x, y, z);
+            
+            // Mettre à jour le vecteur
+            const direction = new THREE.Vector3(x, y, z).normalize();
+            stateVector.setDirection(direction);
+            
+            // Mettre à jour les affichages
+            updateDisplayValues(theta, phi, x, y, z);
+            updateActiveButton(theta, phi);
+        }
+        
+        function updateDisplayValues(theta, phi, x, y, z) {
+            document.getElementById('theta-value').textContent = (theta / Math.PI).toFixed(2) + 'π';
+            document.getElementById('phi-value').textContent = (phi / Math.PI).toFixed(2) + 'π';
+            
+            document.getElementById('x-value').textContent = x.toFixed(4);
+            document.getElementById('y-value').textContent = y.toFixed(4);
+            document.getElementById('z-value').textContent = z.toFixed(4);
+            
+            document.getElementById('theta-display').textContent = (theta / Math.PI).toFixed(2) + 'π';
+            document.getElementById('phi-display').textContent = (phi / Math.PI).toFixed(2) + 'π';
+        }
+        
+        function updateStateFromSliders() {
+            const theta = parseFloat(document.getElementById('theta').value);
+            const phi = parseFloat(document.getElementById('phi').value);
+            updateState(theta, phi);
+        }
+        
+        function setState(theta, phi) {
+            // Mettre à jour les sliders
+            document.getElementById('theta').value = theta;
+            document.getElementById('phi').value = phi;
+            
+            // Mettre à jour l'état
+            updateState(theta, phi);
+        }
+        
+        function updateActiveButton(theta, phi) {
+            // Désactiver tous les boutons
+            document.querySelectorAll('.btn-group button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Vérifier les états prédéfinis
+            const states = {
+                'state-0': [0, 0],
+                'state-1': [Math.PI, 0],
+                'state-plus': [Math.PI/2, 0],
+                'state-minus': [Math.PI/2, Math.PI],
+                'state-plusi': [Math.PI/2, Math.PI/2],
+                'state-minusi': [Math.PI/2, 3*Math.PI/2]
+            };
+            
+            // Activer le bouton correspondant
+            for (const [id, [t, p]] of Object.entries(states)) {
+                if (Math.abs(theta - t) < 0.01 && Math.abs((phi % (2 * Math.PI)) - (p % (2 * Math.PI))) < 0.01) {
+                    document.getElementById(id).classList.add('active');
+                    break;
+                }
+            }
+        }
+        
+        function applyGate(gate) {
+            // Obtenir l'état actuel
+            const theta = currentTheta;
+            const phi = currentPhi;
+            
+            let newTheta, newPhi;
+            
+            switch(gate) {
+                case 'x': // NOT gate
+                    newTheta = Math.PI - theta;
+                    newPhi = (phi + Math.PI) % (2 * Math.PI);
+                    break;
+                case 'y':
+                    newTheta = Math.PI - theta;
+                    newPhi = (2 * Math.PI - phi) % (2 * Math.PI);
+                    break;
+                case 'z':
+                    newTheta = theta;
+                    newPhi = (phi + Math.PI) % (2 * Math.PI);
+                    break;
+                case 'h': // Hadamard
+                    if (Math.abs(theta) < 0.01 || Math.abs(theta - Math.PI) < 0.01) {
+                        // |0⟩ ou |1⟩ → |+⟩ ou |-⟩
+                        newTheta = Math.PI/2;
+                        newPhi = (theta < Math.PI/2) ? 0 : Math.PI;
+                    } else if (Math.abs(theta - Math.PI/2) < 0.01 && 
+                              (Math.abs(phi) < 0.01 || Math.abs(phi - Math.PI) < 0.01)) {
+                        // |+⟩ ou |-⟩ → |0⟩ ou |1⟩
+                        newTheta = (phi < Math.PI/2) ? 0 : Math.PI;
+                        newPhi = 0;
+                    } else {
+                        // Cas général
+                        const x = Math.sin(theta) * Math.cos(phi);
+                        const y = Math.sin(theta) * Math.sin(phi);
+                        const z = Math.cos(theta);
+                        
+                        const newX = z;
+                        const newY = -y;
+                        const newZ = x;
+                        
+                        newTheta = Math.acos(newZ);
+                        newPhi = Math.atan2(newY, newX);
+                        if (newPhi < 0) newPhi += 2 * Math.PI;
+                    }
+                    break;
+                default:
+                    return;
+            }
+            
+            // Mettre à jour les sliders et l'état
+            setState(newTheta, newPhi);
+        }
+        
+        function resetView() {
+            camera.position.set(0, 0, 3);
+            camera.lookAt(0, 0, 0);
+        }
+        
+        function setView(axis) {
+            switch(axis) {
+                case 'x':
+                    camera.position.set(3, 0, 0);
+                    break;
+                case 'y':
+                    camera.position.set(0, 3, 0);
+                    break;
+                case 'z':
+                    camera.position.set(0, 0, 3);
+                    break;
+            }
+            camera.lookAt(0, 0, 0);
+        }
+        
+        function onWindowResize() {
+            const container = document.getElementById('bloch-canvas');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
